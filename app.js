@@ -19,7 +19,42 @@ function parseGoal(value){
   return `${h}:${String(m).padStart(2,'0')}:${String(secPart).padStart(2,'0')}`;
 }
 const sec=s=>{let normalized=parseGoal(s);if(!normalized)return NaN;let [h,m,ss]=normalized.split(':').map(Number);return h*3600+m*60+ss};const clock=n=>{n=Math.max(0,Math.round(n));return `${Math.floor(n/3600)}:${String(Math.floor(n%3600/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`};const pace=n=>{n=Math.round(n);return `${Math.floor(n/60)}:${String(n%60).padStart(2,'0')}/km`};
-function estimate(){let full=sec(state.goal);if(!Number.isFinite(full)||full<7200||full>36000)return null;let half=(full-(state.sex==='F'?600:780))/2;let ten=NaN;for(let add of [480,540,600]){let v=(half-add)/2;if((add===480&&v<=2400)||(add===540&&v>2400&&v<=3000)||(add===600&&v>3000)){ten=v;break}}if(!Number.isFinite(ten))ten=(half-540)/2;return {full,half,ten,k:ten/10,mp:full/42.195}}
+// Jack Daniels VDOT: oxygen cost of velocity / sustainable VO2 fraction by race duration.
+function vdotFor(distanceKm,seconds){
+  const minutes=seconds/60, v=distanceKm*1000/minutes;
+  const oxygen=-4.60+0.182258*v+0.000104*v*v;
+  const fraction=0.8+0.1894393*Math.exp(-0.012778*minutes)+0.2989558*Math.exp(-0.1932605*minutes);
+  return oxygen/fraction;
+}
+function timeFromVdot(distanceKm,target){
+  let low=distanceKm*120,high=distanceKm*1200;
+  for(let i=0;i<90;i++){
+    const mid=(low+high)/2;
+    if(vdotFor(distanceKm,mid)>target)low=mid;else high=mid;
+  }
+  return (low+high)/2;
+}
+function estimate(){
+  const full=sec(state.goal);
+  if(!Number.isFinite(full)||full<7200||full>36000)return null;
+  // Empirical variable coefficient, anchored at full marathon 3:00.
+  // Every 10 minutes slower adds 30 seconds: at 3:40, male 15m / female 10m.
+  // This is an extrapolating model, not a validated population predictor.
+  const fullHalfConstant=(state.sex==='F' ? 480 : 780)+(full-10800)/20;
+  const half=(full-fullHalfConstant)/2;
+  let personalTen=NaN;
+  for(const add of [480,540,600]){
+    const v=(half-add)/2;
+    if((add===480&&v<=2400)||(add===540&&v>2400&&v<=3000)||(add===600&&v>3000)){
+      personalTen=v;break;
+    }
+  }
+  if(!Number.isFinite(personalTen))personalTen=(half-540)/2;
+  const vdot=vdotFor(42.195,full);
+  const vdotTen=timeFromVdot(10,vdot);
+  const ten=(personalTen+vdotTen)/2;
+  return {full,half,fullHalfConstant,ten,personalTen,vdotTen,vdot,k:ten/10,mp:full/42.195};
+}
 const W=[
 {t:4,l:'24km 이지',km:24,mode:'easy'},{t:5,l:'26km · 후반 5km 스테디',km:26,mode:'steady',tail:5},{t:4,l:'28km · 후반 6km 스테디',km:28,mode:'steady',tail:6},{t:3,l:'22~24km 이지 (회복)',km:23,mode:'easy'},
 {t:4,l:'28km 프로그레션',km:28,mode:'progress'},{t:4,l:'30km 변속주',km:30,mode:'alternate'},{t:3,l:'30~32km 변속주 · AR',km:31,mode:'alternate'},{t:4,l:'26~28km · 후반 MP 일부',km:27,mode:'mpTail',tail:6},
@@ -50,7 +85,7 @@ if(wi<0 && [3,5,6].includes(dow)){
  }
 return {name,detail,km,type,phase,sets}}
 function el(tag,txt){let x=document.createElement(tag);x.textContent=txt;return x}function showTab(tab){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab));['today','calendar','log','analysis'].forEach(id=>$(id).classList.toggle('hidden',id!==tab));if(tab==='analysis')renderStats();if(tab==='calendar')renderCal();if(tab==='log')renderLog()}
-let selected=today,month=today.slice(0,7);function renderMetrics(){let E=estimate();$('metrics').replaceChildren();if(!E)return;[['풀코스 목표',clock(E.full)],['풀 목표 페이스',pace(E.mp)],['10K 역산 예상',clock(E.ten)],['10K 기준 페이스',pace(E.k)],['VO₂max 90% · 1000m',pace(E.k-10)],['LT 인터벌 · 2000m',pace(E.k+10)],['LT 지속주',pace(E.k+15)],['수·금 회복 조깅',pace(E.k+100)],['토요일 이지주',pace(E.k+90)],['일요일 이지',pace(E.k+110)]].forEach(([a,b])=>{let d=el('div','');d.className='metric';d.append(el('small',a),el('b',b));$('metrics').append(d)})}
+let selected=today,month=today.slice(0,7);function renderMetrics(){let E=estimate();$('metrics').replaceChildren();if(!E)return;[['풀코스 목표',clock(E.full)],['풀→하프 환산 상수',`${Math.floor(E.fullHalfConstant/60)}분 ${String(Math.round(E.fullHalfConstant%60)).padStart(2,'0')}초`],['풀 목표 페이스',pace(E.mp)],['10K 통합 예상 (평균)',clock(E.ten)],['10K 개인 공식',clock(E.personalTen)],['10K VDOT 환산',clock(E.vdotTen)],['10K 기준 페이스',pace(E.k)],['VO₂max 90% · 1000m',pace(E.k-10)],['LT 인터벌 · 2000m',pace(E.k+10)],['LT 지속주',pace(E.k+15)],['수·금 회복 조깅',pace(E.k+100)],['토요일 이지주',pace(E.k+90)],['일요일 이지',pace(E.k+110)]].forEach(([a,b])=>{let d=el('div','');d.className='metric';d.append(el('small',a),el('b',b));$('metrics').append(d)})}
 function renderDay(){let s=schedule(selected),log=state.logs[selected];$('selectedDate').value=selected;$('dayTitle').textContent=`${selected} · ${['일','월','화','수','목','금','토'][dt(selected).getDay()]}요일`;$('countdown').textContent=`대회까지 D${days(state.race,selected)>=0?'-'+days(state.race,selected):'+'+Math.abs(days(state.race,selected))} · ${state.race} (동아마라톤)`;$('phase').textContent=s.phase;$('workout').textContent=`${s.name}\n계획 거리: ${s.km}km\n${s.detail}`;$('dailyNote').textContent=log?`실제 기록: ${log.status==='done'?'완료':log.status==='partial'?'일부 완료':'미실시'} · ${log.distance||0}km · RPE ${log.rpe||'미입력'}`:'아직 실제 훈련 기록이 없습니다.';renderWeek()}
 function renderWeek(){let monday=plus(selected,-((dt(selected).getDay()+6)%7));let box=$('weekTable');box.replaceChildren();let table=el('table',''),thead=el('tr','');['날짜','훈련','계획 거리','실제'].forEach(t=>thead.append(el('th',t)));table.append(thead);for(let i=0;i<7;i++){let date=plus(monday,i),s=schedule(date),l=state.logs[date],tr=el('tr','');[date.slice(5),s.name,`${s.km}km`,l?`${l.distance||0}km`:'—'].forEach(t=>tr.append(el('td',t)));tr.style.cursor='pointer';tr.onclick=()=>{selected=date;renderDay()};table.append(tr)}box.append(table)}
 function renderCal(){let [y,m]=month.split('-').map(Number),first=new Date(y,m-1,1),offset=first.getDay(),count=new Date(y,m,0).getDate();$('monthTitle').textContent=`${y}년 ${m}월`;$('cal').replaceChildren();['일','월','화','수','목','금','토'].forEach(x=>$('cal').append(el('div',x)));for(let i=0;i<Math.ceil((offset+count)/7)*7;i++){let d=i-offset+1,date=iso(new Date(y,m-1,d,12)),s=schedule(date),l=state.logs[date],b=el('button','');b.className='day'+(d<1||d>count?' outside':'')+(l?(l.status==='miss'?' miss':' done'):'')+(s.type==='long'?' long':s.type==='lt'||s.type==='vo2'?' point':'')+(selected===date?' active':'');b.append(el('strong',String(dt(date).getDate())),el('small',s.name.replace('VO₂max ','').slice(0,13)));b.onclick=()=>{selected=date;renderDay();showTab('today')};$('cal').append(b)}}
