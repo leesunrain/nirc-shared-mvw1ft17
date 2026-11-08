@@ -64,10 +64,10 @@ const W=[
 {t:4,l:'평지 28km · 후반 8km MP+10',km:28,mode:'mp10',tail:8},
 {t:4,l:'평지 30km 이지',km:30,mode:'easy'},
 {t:3,l:'평지 32km · 후반 8km MP+10',km:32,mode:'mp10',tail:8},
-{t:3,l:'평지 24km 회복',km:24,mode:'easy'},
-{t:3,l:'평지 28km · 후반 8km MP',km:28,mode:'mpTail',tail:8},
-{t:2,l:'평지 24km · MP 6km',km:24,mode:'mpTail',tail:6},
-{t:2,l:'평지 16km · MP 4km',km:16,mode:'mpTail',tail:4},
+{t:3,l:'D-4주 · 24km E + 8km MP+10초',km:32,mode:'mp10',tail:8},
+{t:2,l:'D-3주 · 5km E + 20km MP + 5km E',km:30,mode:'mpMiddle'},
+{t:2,l:'D-2주 · 하프 21.1km 통제주',km:21.1,mode:'half'},
+{t:2,l:'D-1주 · 12km 전 구간 MP',km:12,mode:'mpFull'},
 {t:2,l:'대회 주간 · 회복',km:0,mode:'easy'}];
 const PRE=[16,20,24,16,20,24,24,16,20];
 const PRE_TARGET=[75,80,85,70,85,90,95,80,85];
@@ -84,9 +84,10 @@ if(dow===2){type='vo2';sets=peak?config.t:PRE_VO2[idx];if(wi===11){sets=3;name='
 if(dow===3){name='이지 조깅';km=wi<0?12:wi>=9?6:wi===3||wi===6?8:9;detail=`${km}km · ${jog}\n전날 인터벌 후 회복 우선`}
 if(dow===4){type='lt';let rep=peak?wi===3?'1600m × 3':wi===6?'2000m × 2':wi===9?'1600m × 2':wi===10?'1000m × 3':wi===8||wi===5||wi===6?'2000m × 2':'2000m × 3':`2000m × ${PRE_LT[idx]}`;if(wi===11){name='가벼운 조깅 + 짧은 자극';detail=`조깅 6km · ${jog}\n1000m × 2 선택 (10K 페이스보다 느리게), 회복 2분`;km=6;type='easy'}else{name=`LT 인터벌 ${rep}`;let part=rep.startsWith('1600')?1.6:rep.startsWith('1000')?1:2;let count=Number(rep.split('×')[1].trim());km=+(part*count+4+(count-1)*0.1).toFixed(1);sets=count;detail=`${rep} · ${pace(k+10)} (10K 페이스 +10초/km)\n반복 사이 1분 가벼운 이동/조깅\n워밍업 2km + 쿨다운 2km · 총 약 ${km}km`}}
 if(dow===5){name='회복 조깅';km=wi<0?10:wi>=10?6:wi===3||wi===6?6:8;detail=`${km}km · ${jog}\n회복이 부족하면 휴식으로 대체`}
-if(dow===6){name='유산소 이지주';km=wi<0?12:wi===11?6:wi>=9?8:wi===3||wi===6?8:wi===5||wi===8?10:11;detail=`${km}km · ${sat}\n일요일 장거리 대비 편안하게`}
-if(dow===0){type='long';if(wi===11){name='대회 전날 휴식';detail='완전 휴식 · 보급·장비 점검';type='rest'}else if(peak){let c=W[wi];name=c.l;km=c.km;let tail=c.tail||0;if(c.mode==='easy')detail=`${km}km · 이지 ${easy}`;else if(c.mode==='steady')detail=`앞 ${km-tail}km ${easy} → 뒤 ${tail}km 스테디 ${pace(k+75)} (상태에 따라 조정)`;else if(c.mode==='progress')detail=`28km 프로그레션 · 이지 ${easy} 시작, 후반 점진 가속 (MP보다 빠르지 않게)`;else if(c.mode==='alternate')detail=`${km}km 변속주 · 이지 ${easy} / 스테디 ${pace(k+70)} 구간 반복\n피로가 높으면 전 구간 이지로 변경`;else if(c.mode==='mpTail')detail=`앞 ${km-tail}km 이지 ${easy} → 뒤 ${tail}km MP ${pace(trainingMp)}`;else if(c.mode==='mp10')detail=`앞 ${km-tail}km 이지 ${easy} → 후반 ${tail}km ${pace(trainingMp+10)}`;else if(c.mode==='mpMiddle')detail=`5km 이지 → 20km MP ${pace(mp)} → 5km 이지`;else if(c.mode==='half')detail=`21.1km MP ${pace(mp)}`;else detail=`${km}km MP ${pace(mp)}`}else{km=PRE[idx];name=`너리재 언덕 ${km}km`;detail=`너리재 오르막·내리막 반복 · 총 ${km}km\n이지 노력 강도 유지, 내리막 과속 금지 · 8km 회전 기준, 추가 거리는 선택` }}
+if(dow===6){name='유산소 이지주';km=wi<0?12:wi===11?0:wi>=9?8:wi===3||wi===6?8:wi===5||wi===8?10:11;detail=`${km}km · ${sat}\n일요일 장거리 대비 편안하게`}
+if(dow===0){type='long';if(wi===11){name='대회 전날 휴식';detail='완전 휴식 · 보급·장비 점검';type='rest'}else if(peak){let c=W[wi];name=c.l;km=c.km;let tail=c.tail||0;if(c.mode==='easy')detail=`${km}km · 이지 ${easy}`;else if(c.mode==='steady')detail=`앞 ${km-tail}km ${easy} → 뒤 ${tail}km 스테디 ${pace(k+75)} (상태에 따라 조정)`;else if(c.mode==='progress')detail=`28km 프로그레션 · 이지 ${easy} 시작, 후반 점진 가속 (MP보다 빠르지 않게)`;else if(c.mode==='alternate')detail=`${km}km 변속주 · 이지 ${easy} / 스테디 ${pace(k+70)} 구간 반복\n피로가 높으면 전 구간 이지로 변경`;else if(c.mode==='mpTail')detail=`앞 ${km-tail}km 이지 ${easy} → 뒤 ${tail}km MP ${pace(trainingMp)}`;else if(c.mode==='mp10')detail=`앞 ${km-tail}km 이지 ${easy} → 후반 ${tail}km ${pace(trainingMp+10)}`;else if(c.mode==='mpMiddle')detail=`5km 이지 ${easy} → 20km MP ${pace(trainingMp)} → 5km 이지 ${easy}\nD-3주 핵심 고부하: 회복 상태에 따라 조절`;else if(c.mode==='half')detail=`하프 21.1km 통제주 · 목표 ${clock(E.full/2-50)} · 평균 ${pace((E.full/2-50)/21.0975)}\n전력 레이스 금지 · 피로 누적 시 거리/강도 축소`;else if(c.mode==='mpFull')detail=`12km 전 구간 MP ${pace(trainingMp)} · 대회 1주 전 마지막 MP 리듬 확인\n무리한 가속 금지 · 피로가 남으면 단축`;else detail=`${km}km MP ${pace(trainingMp)}`}else{km=PRE[idx];name=`너리재 언덕 ${km}km`;detail=`너리재 오르막·내리막 반복 · 총 ${km}km\n이지 노력 강도 유지, 내리막 과속 금지 · 8km 회전 기준, 추가 거리는 선택` }}
 // Saturday is fixed at 10 km. Preparation weekly targets are met by Wednesday/Friday only.
+if(dow===6 && wi===11){km=0;type='rest';name='대회 전날 휴식';detail='휴식 · 보급·장비 점검 · 새로운 훈련 금지'}
 if(dow===6 && wi!==11){km=10;name='토요일 조깅 10km';detail=`10km · ${sat} (10K 기준 +1분 10초/km)\n일요일 장거리 대비 편안하게`}
 if([3,5].includes(dow) && wi!==11){
  let monday=plus(date,-((dow+6)%7));
